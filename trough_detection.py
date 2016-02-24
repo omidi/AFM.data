@@ -17,6 +17,7 @@ def plot_one_cell_in_time(cell_name):
         left_pad = np.argmax(conv) - len(x) + 1
         if left_pad<0:
             left_pad = 0
+            
         total_pad += data[t_prev][0][left_pad]
         plt.plot(data[t_curr][0] + total_pad, (x / max(x)))
     plt.show()
