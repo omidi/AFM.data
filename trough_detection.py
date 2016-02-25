@@ -122,17 +122,18 @@ def align_daughter2(mother, daughter):
     cut = int(len(daughter[0])*cut_percentage)
     dx = daughter[0][cut:(len(daughter[0]) - cut)]
     dy = daughter[1][cut:(len(daughter[1]) - cut)]
+    dy = dy / max(dy)
     pad_width = len(dy)/2
-    dyd = np.gradient(dy, 5)  # 5 determines the smoothness of the profile
-    myd = np.gradient(my, 5)  # 5 determines the smoothness of the profile
-    my_pad = np.pad(myd, (len(dyd)-pad_width, len(dyd)+pad_width), 'constant')
-
+    dyd = np.gradient(dy, 10)  # 5 determines the smoothness of the profile
+    myd = np.gradient(my, 10)  # 5 determines the smoothness of the profile
+    my_pad = np.pad(my, (len(dy)-pad_width, len(dy)+pad_width), 'constant')
+    my_pad /= max(my_pad)
     min_dist = np.inf
     best_padding = 0
     total_padding = len(my_pad) - len(dy) + 1
     inverse = False
     for padding in xrange(total_padding):
-        dist = np.sum(([(p[0] - p[1])**2 for p in zip(dyd, my_pad[padding:(padding+len(dy))])]))
+        dist = np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[padding:(padding+len(dy))])]))
         if dist < min_dist:
             min_dist = dist
             best_padding = padding
@@ -145,12 +146,15 @@ def align_daughter2(mother, daughter):
         #     best_padding = padding
         #     inverse = True
 
+    # print np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[136:(136+len(dy))])]))
+    # print np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[140:(141+len(dy))])]))
+    # exit()
     if best_padding < pad_width:
-        offset = -dx[best_padding]
+        offset = -dx[best_padding - 1]
     else:
-        offset = mx[best_padding - pad_width]
+        offset = mx[best_padding - pad_width - 1]
 
-    plt.plot(mx, my)
+    plt.plot(mx, my/max(my))
     if not inverse:
         plt.plot(dx + offset, dy)
     else:
