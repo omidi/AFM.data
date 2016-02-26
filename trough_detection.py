@@ -55,112 +55,50 @@ def plot_all_cells_profile():
     plt.show()
 
 
-
-def align_daughter(mother, daughter):
+def align_two_cells(mother, daughter):
     """
-    It is assumed that the length of daughter is shorter than mother
-    :param mother: mother data as given by load_file() function
-    :param daughter: daughter data
-    :return: is the offset of daughter and x-axis position relative to its mother
+    it is assumed that the mother cell is longer than the daughter cell
+    :param mother:
+    :param daughter:
+    :return:
     """
-    cut_percentage = .05
-    cut = int(len(mother[0])*cut_percentage)
-    mx = mother[0][cut:(len(mother[0]) - cut)]
-    my = mother[1][cut:(len(mother[1]) - cut)]
-
-    cut = int(len(daughter[0])*cut_percentage)
-    dx = daughter[0][cut:(len(daughter[0]) - cut)]
-    dy = daughter[1][cut:(len(daughter[1]) - cut)]
-
-    dyd = np.gradient(dy, 5)  # 5 determines the smoothness of the profile
-    myd = np.gradient(my, 5)  # 5 determines the smoothness of the profile
-
-    plt.plot(mx, my)
-    # plt.plot(dx, dy)
-    # plt.show()
-    # exit()
-    best_score = np.inf
-    best_offset = 0
-    final_dy = np.array([])
-    for rev in [False, True]:
-        if rev:
-            y = dy[::-1]
-            h = dy[::-1]
+    pad_width = 20
+    mx = mother[0]
+    my = mother[1]
+    dx = daughter[0]
+    dy = daughter[1]
+    dyd = np.gradient(dy)  # 5 determines the smoothness of the profile
+    myd = np.gradient(my)  # 5 determines the smoothness of the profile
+    myd = np.pad(myd, (pad_width, pad_width), 'constant')
+    distance = []
+    distance_rev = []
+    for pad in xrange(len(myd) - len(dyd) + 1):
+        dist = np.mean(([(p[0] - p[1])**2 for p in zip(dyd, myd[pad:(pad+len(dyd))])]))
+        dist_rev = np.mean(([(p[0] - p[1])**2 for p in zip(dyd[::-1], myd[pad:(pad+len(dyd))])]))
+        distance.append(dist)
+        distance_rev.append(dist_rev)
+    if min(distance) < min(distance_rev):
+        left_pad = np.argmin(distance) - pad_width
+        if left_pad > 0:
+            offset = mx[left_pad]
         else:
-            y = dy
-            h = dy
-        conv = np.convolve(my, y)
-        # plt.plot(conv)
-        left_pad = np.argmax(conv) - len(y) + 1
-        # print left_pad, np.argmax(conv)
-        # continue
-        if left_pad<0:
-            offset = -mx[abs(left_pad)] if not rev else mx[-abs(left_pad)] - max(mx)
-            y_padded = y
+            offset = -mx[-left_pad]
+    else:
+        left_pad = np.argmin(distance_rev) - pad_width
+        if left_pad > 0:
+            offset = mx[left_pad]
         else:
-            offset = mx[left_pad] if not rev else max(mx) - mx[-left_pad]
-            y_padded = np.pad(y, (left_pad, 0), 'constant')
-        # plt.plot(dx + offset, h)
-        # plt.show()
-        # exit()
-
-        # dx_padded = np.pad(dx,(left_pad, right_pad), 'edge')
-        score = np.sum(np.power([np.diff(p) for p in zip(y_padded, my)], 2))
-        if score < best_score:
-            best_offset = offset
-            final_y = h
-            best_score = score
-    plt.plot(dx + best_offset, final_y)
-    plt.show()
+            offset = -mx[-left_pad]
+    return offset
 
 
-def align_daughter2(mother, daughter):
-    cut_percentage = .0
-    cut = int(len(mother[0])*cut_percentage)
-    mx = mother[0][cut:(len(mother[0]) - cut)]
-    my = mother[1][cut:(len(mother[1]) - cut)]
-    cut = int(len(daughter[0])*cut_percentage)
-    dx = daughter[0][cut:(len(daughter[0]) - cut)]
-    dy = daughter[1][cut:(len(daughter[1]) - cut)]
-    dy = dy / max(dy)
-    pad_width = len(dy)/2
-    dyd = np.gradient(dy, 10)  # 5 determines the smoothness of the profile
-    myd = np.gradient(my, 10)  # 5 determines the smoothness of the profile
-    my_pad = np.pad(my, (len(dy)-pad_width, len(dy)+pad_width), 'constant')
-    my_pad /= max(my_pad)
-    min_dist = np.inf
-    best_padding = 0
-    total_padding = len(my_pad) - len(dy) + 1
-    inverse = False
-    for padding in xrange(total_padding):
-        dist = np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[padding:(padding+len(dy))])]))
-        if dist < min_dist:
-            min_dist = dist
-            best_padding = padding
-
-    print best_padding, total_padding, min_dist, pad_width
-    # for padding in xrange(total_padding):
-    #     dist = np.sum(([(p[0] - p[1])**2 for p in zip(dy[::-1], my_pad[padding:(padding+len(dy))])]))
-        # if dist < min_dist:
-        #     min_dist = dist
-        #     best_padding = padding
-        #     inverse = True
-
-    # print np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[136:(136+len(dy))])]))
-    # print np.sum(([(p[0] - p[1])**2 for p in zip(dy, my_pad[140:(141+len(dy))])]))
-    # exit()
-    if best_padding < pad_width:
-        offset = -dx[best_padding - 1]
-    else:
-        offset = mx[best_padding - pad_width - 1]
-
-    plt.plot(mx, my/max(my))
-    if not inverse:
-        plt.plot(dx + offset, dy)
-    else:
-        plt.plot(dx + offset, dy[::-1])
-    plt.show()
-    print best_padding, total_padding, offset, min_dist, inverse
+def align_both_daughters(mother, daughter1, daughter2):
+    plt.plot(mother[0], mother[1])
+    offset1 = align_two_cells(mother, daughter1)
+    plt.plot(daughter1[0] + offset1, daughter1[1])
+    offset2 = align_two_cells(mother, daughter2)
+    plt.plot(daughter2[0] + offset2, daughter2[1])
+    return offset1, offset2
 
 
 def find_daughter_cells(cell_name):
@@ -168,7 +106,19 @@ def find_daughter_cells(cell_name):
     mother_last_time = load_file(return_all_files_for_cell(cell_name)[-1])
     daughter1 = map(load_file, return_all_files_for_cell(cell_name + '.1'))
     daughter2 = map(load_file, return_all_files_for_cell(cell_name + '.2'))
-    align_daughter2(mother_last_time, daughter2[0])
+    offset1, offset2 = align_both_daughters(mother_last_time, daughter1[0], daughter2[0])
+    # offset = align_two_cells(daughter1[1], daughter1[0]) + offset1
+    # for i in xrange(1, 2):
+    #     plt.plot(daughter1[i][0] + offset, daughter1[i][1])
+    #     offset += align_two_cells(daughter1[i+1], daughter1[i]) + offset
+    #
+    offset = align_two_cells(daughter2[1], daughter2[2]) + offset2
+    plt.plot(daughter2[1][0] + offset, daughter2[1][1])
+    plt.plot(daughter2[2][0], daughter2[2][1])
+    for i in xrange(1, 3):
+        plt.plot(daughter2[i][0] + offset, daughter2[i][1])
+        offset += align_two_cells(daughter2[i+1], daughter2[i]) + offset
+    plt.show()
     exit()
     cut = int(len(mother_last_time[0])*cut_percentage)
     mother_x = mother_last_time[0][cut:(len(mother_last_time[0]) - cut)]
