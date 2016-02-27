@@ -2,12 +2,6 @@ from imports import *
 from toolbox import *
 
 
-def detect_troughs(signal, vicinity=10):
-    y = np.gradient(np.gradient(signal, 5), 5)  # 5 determines the smoothness of the profile
-    mins = argrelextrema(y, np.greater, order=vicinity)
-    return mins[0]
-
-
 def plot_one_cell_in_time(cell_name):
     data = map(load_file, return_all_files_for_cell(cell_name))
     orders_by_length = np.argsort(([max(d[0]) for d in data]))[::-1]
@@ -55,18 +49,12 @@ def plot_all_cells_profile():
     plt.show()
 
 
-def align_two_cells(mother, daughter):
-    """
-    it is assumed that the mother cell is longer than the daughter cell
-    :param mother:
-    :param daughter:
-    :return:
-    """
-    pad_width = 20
-    mx = mother[0]
-    my = mother[1]
-    dx = daughter[0]
-    dy = daughter[1]
+def align_two_cells(smaller, bigger):
+    pad_width = 10
+    mx = smaller[0]
+    my = smaller[1]
+    dx = bigger[0]
+    dy = bigger[1]
     dyd = np.gradient(dy)  # 5 determines the smoothness of the profile
     myd = np.gradient(my)  # 5 determines the smoothness of the profile
     myd = np.pad(myd, (pad_width, pad_width), 'constant')
@@ -101,24 +89,51 @@ def align_both_daughters(mother, daughter1, daughter2):
     return offset1, offset2
 
 
+def detect_troughs(cell, vicinity=None):
+    if not vicinity:
+        vicinity = int(np.ceil(max(cell[0])/.5))
+    y = np.gradient(np.gradient(cell[1], 5), 5)  # 5 determines the smoothness of the profile
+    mins = argrelextrema(y, np.greater, order=vicinity)
+    troughs = []
+    heights = []
+    for m in mins[0]:
+        if cell[0][m] < 1. or cell[0][m] > (max(cell[0] - 1.)):
+            continue
+        troughs.append(cell[0][m])
+        heights.append((cell[1][m]))
+    return troughs, heights
+
+
 def find_daughter_cells(cell_name):
     cut_percentage = .05
     mother_last_time = load_file(return_all_files_for_cell(cell_name)[-1])
     daughter1 = map(load_file, return_all_files_for_cell(cell_name + '.1'))
     daughter2 = map(load_file, return_all_files_for_cell(cell_name + '.2'))
-    offset1, offset2 = align_both_daughters(mother_last_time, daughter1[0], daughter2[0])
+    plt.plot(mother_last_time[0], mother_last_time[1])
+    troughs, heights = detect_troughs(mother_last_time)
+    plt.plot(troughs, heights, 'o', color="red")
+    o1, o2 = align_both_daughters(mother_last_time, daughter1[0], daughter2[0])
+    t1, h1 = detect_troughs(daughter1[0])
+    t2, h2 = detect_troughs(daughter2[0])
+
+    plt.plot(daughter1[0][0] + o1, daughter1[0][1])
+    plt.plot(daughter2[0][0] + o2, daughter2[0][1])
+    plt.plot(t1 + o1, h1, 'o', color="black")
+    plt.plot(t2 + o2, h2, 'o', color="black")
+    plt.show()
+    # offset1, offset2 = align_both_daughters(mother_last_time, daughter1[0], daughter2[0])
     # offset = align_two_cells(daughter1[1], daughter1[0]) + offset1
     # for i in xrange(1, 2):
     #     plt.plot(daughter1[i][0] + offset, daughter1[i][1])
     #     offset += align_two_cells(daughter1[i+1], daughter1[i]) + offset
     #
-    offset = align_two_cells(daughter2[1], daughter2[2]) + offset2
-    plt.plot(daughter2[1][0] + offset, daughter2[1][1])
-    plt.plot(daughter2[2][0], daughter2[2][1])
-    for i in xrange(1, 3):
-        plt.plot(daughter2[i][0] + offset, daughter2[i][1])
-        offset += align_two_cells(daughter2[i+1], daughter2[i]) + offset
-    plt.show()
+    # offset = align_two_cells(daughter2[1], daughter2[2]) + offset2
+    # plt.plot(daughter2[1][0] + offset, daughter2[1][1])
+    # plt.plot(daughter2[2][0], daughter2[2][1])
+    # for i in xrange(1, 3):
+    #     plt.plot(daughter2[i][0] + offset, daughter2[i][1])
+    #     offset += align_two_cells(daughter2[i+1], daughter2[i]) + offset
+    # plt.show()
     exit()
     cut = int(len(mother_last_time[0])*cut_percentage)
     mother_x = mother_last_time[0][cut:(len(mother_last_time[0]) - cut)]
