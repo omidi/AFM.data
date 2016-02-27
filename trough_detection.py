@@ -50,11 +50,11 @@ def plot_all_cells_profile():
 
 
 def align_two_cells(smaller, bigger):
-    pad_width = 10
-    mx = smaller[0]
-    my = smaller[1]
-    dx = bigger[0]
-    dy = bigger[1]
+    pad_width = 20
+    mx = bigger[0]
+    my = bigger[1]
+    dx = smaller[0]
+    dy = smaller[1]
     dyd = np.gradient(dy)  # 5 determines the smoothness of the profile
     myd = np.gradient(my)  # 5 determines the smoothness of the profile
     myd = np.pad(myd, (pad_width, pad_width), 'constant')
@@ -88,7 +88,6 @@ def align_both_daughters(mother, daughter1, daughter2):
     plt.plot(daughter2[0] + offset2, daughter2[1])
     return offset1, offset2
 
-
 def detect_troughs(cell, vicinity=None):
     if not vicinity:
         vicinity = int(np.ceil(max(cell[0])/.5))
@@ -104,6 +103,20 @@ def detect_troughs(cell, vicinity=None):
     return troughs, heights
 
 
+def plot_one_cell(cell):
+    plt.plot(cell[0], cell[1], lw=2)
+    p, h = detect_troughs(cell)
+    plt.plot(p, h, 'o', color='black')
+    plt.show()
+
+def plot_derivativ_one_cell(cell):
+    y = np.gradient(np.gradient(cell[1], 5), 5)
+    plt.plot(cell[0], y, lw=2)
+    p, h = detect_troughs(cell)
+    plt.plot(p, [0 for i in xrange(len(p))], 'o', color='black')
+    plt.show()
+
+
 def find_daughter_cells(cell_name):
     cut_percentage = .05
     mother_last_time = load_file(return_all_files_for_cell(cell_name)[-1])
@@ -115,7 +128,6 @@ def find_daughter_cells(cell_name):
     o1, o2 = align_both_daughters(mother_last_time, daughter1[0], daughter2[0])
     t1, h1 = detect_troughs(daughter1[0])
     t2, h2 = detect_troughs(daughter2[0])
-
     plt.plot(daughter1[0][0] + o1, daughter1[0][1])
     plt.plot(daughter2[0][0] + o2, daughter2[0][1])
     plt.plot(t1 + o1, h1, 'o', color="black")
@@ -172,5 +184,41 @@ def find_daughter_cells(cell_name):
     plt.show()
 
 
+def troughs_in_time(cellname):
+    cells = map(load_file, return_all_files_for_cell(cellname))
+    positions = [detect_troughs(cell)[0] for cell in cells]
+    plt.xlim((-14, max(cells[-1][0]+14)))
+    plt.ylim((-20, len(cells)+2))
+    for t, c in enumerate(cells):
+        x = len(cells) - t
+        start = -(max(c[0]) - max(cells[-1][0]))/2
+        plt.plot([start, start + max(c[0])], [x, x], lw=4)
+    for t, pos in enumerate(positions):
+        x = len(cells) - t
+        start = -(max(cells[t][0]) - max(cells[-1][0]))/2
+        plt.plot([p + start for p in pos], [x for i in xrange(len(pos))],
+                 'o', color='black')
+    d1 = map(load_file, return_all_files_for_cell(cellname + '.1'))
+    d2 = map(load_file, return_all_files_for_cell(cellname + '.2'))
+    o2 = align_two_cells(d2[0], cells[-1])
+    o1 = align_two_cells(d1[0], cells[-1])
+    for t in xrange(len(d1)):
+        x = -t - 1
+        start = o1 - (max(d1[t][0]) - max(d1[-1][0]))/2 - 5
+        troughs = detect_troughs(d1[t])[0]
+        plt.plot([start, start + max(d1[t][0])], [x, x], lw=4)
+        plt.plot([t+start for t in troughs],
+                 [x for i in xrange(len(troughs))], 'o', color='black')
+    for t in xrange(len(d2)):
+        x = -t - 1
+        start = o2 - (max(d2[t][0]) - max(d2[-1][0]))/2 + 5
+        plt.plot([start, start + max(d2[t][0])], [x, x], lw=4)
+        troughs = detect_troughs(d2[t])[0]
+        plt.plot([t+start for t in troughs],
+                 [x for i in xrange(len(troughs))], 'o', color='black')
+    plt.show()
+
 # plot_all_cells_profile()
-find_daughter_cells('1.1.1')
+# find_daughter_cells('1.1')
+# troughs_in_time('1.1')
+plot_one_cell(load_file(return_all_files_for_cell('1.1')[1]))
