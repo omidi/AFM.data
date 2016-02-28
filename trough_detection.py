@@ -91,7 +91,8 @@ def align_both_daughters(mother, daughter1, daughter2):
 def detect_troughs(cell, vicinity=None):
     if not vicinity:
         vicinity = int(np.ceil(max(cell[0])/.5))
-    y = np.gradient(np.gradient(cell[1], 5), 5)  # 5 determines the smoothness of the profile
+    signal = savitzky_golay(cell[1], 9, 5)
+    y = np.gradient(np.gradient(signal, 5), 5)  # 5 determines the smoothness of the profile
     mins = argrelextrema(y, np.greater, order=vicinity)
     troughs = []
     heights = []
@@ -105,6 +106,9 @@ def detect_troughs(cell, vicinity=None):
 
 def plot_one_cell(cell):
     plt.plot(cell[0], cell[1], lw=2)
+    yhat = savitzky_golay(cell[1], 9, 5)
+    plt.plot(cell[0], yhat, '--r')
+    # exit()
     p, h = detect_troughs(cell)
     plt.plot(p, h, 'o', color='black')
     plt.show()
@@ -188,11 +192,12 @@ def troughs_in_time(cellname):
     cells = map(load_file, return_all_files_for_cell(cellname))
     positions = [detect_troughs(cell)[0] for cell in cells]
     plt.xlim((-14, max(cells[-1][0]+14)))
-    plt.ylim((-20, len(cells)+2))
+    plt.ylim((-10, len(cells)+2))
+    plt.axis("off")
     for t, c in enumerate(cells):
         x = len(cells) - t
         start = -(max(c[0]) - max(cells[-1][0]))/2
-        plt.plot([start, start + max(c[0])], [x, x], lw=4)
+        plt.plot([start, start + max(c[0])], [x, x], lw=4, color="gray")
     for t, pos in enumerate(positions):
         x = len(cells) - t
         start = -(max(cells[t][0]) - max(cells[-1][0]))/2
@@ -206,13 +211,13 @@ def troughs_in_time(cellname):
         x = -t - 1
         start = o1 - (max(d1[t][0]) - max(d1[-1][0]))/2 - 5
         troughs = detect_troughs(d1[t])[0]
-        plt.plot([start, start + max(d1[t][0])], [x, x], lw=4)
+        plt.plot([start, start + max(d1[t][0])], [x, x], lw=4, color="red")
         plt.plot([t+start for t in troughs],
                  [x for i in xrange(len(troughs))], 'o', color='black')
     for t in xrange(len(d2)):
         x = -t - 1
         start = o2 - (max(d2[t][0]) - max(d2[-1][0]))/2 + 5
-        plt.plot([start, start + max(d2[t][0])], [x, x], lw=4)
+        plt.plot([start, start + max(d2[t][0])], [x, x], lw=4, color="blue")
         troughs = detect_troughs(d2[t])[0]
         plt.plot([t+start for t in troughs],
                  [x for i in xrange(len(troughs))], 'o', color='black')
@@ -220,5 +225,5 @@ def troughs_in_time(cellname):
 
 # plot_all_cells_profile()
 # find_daughter_cells('1.1')
-# troughs_in_time('1.1')
-plot_one_cell(load_file(return_all_files_for_cell('1.1')[1]))
+troughs_in_time('1.1.1')
+# plot_one_cell(load_file(return_all_files_for_cell('1.1.1')[7]))
