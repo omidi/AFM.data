@@ -4,6 +4,7 @@ from toolbox import *
 
 def plot_one_cell_in_time(cell_name):
     # print cell_name
+    
     data = map(load_file, return_all_files_for_cell(cell_name))
     orders_by_length = np.argsort(([max(d[0]) for d in data]))[::-1]
     longest_cell = orders_by_length[0]
